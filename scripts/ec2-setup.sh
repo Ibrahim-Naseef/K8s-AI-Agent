@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-shot setup for Ubuntu 22.04/24.04 EC2 (x86_64 or arm64/Graviton).
 # Installs Docker, kubectl, kind, creates a local cluster, deploys the demo broken apps,
-# creates a Python venv and a .env with a generated APP_TOKEN.
+# creates a Python venv and a .env.
 # Run from the repo root:  bash scripts/ec2-setup.sh
 set -euo pipefail
 
@@ -48,10 +48,7 @@ python3 -m venv .venv
 
 if [ ! -f .env ]; then
   cp .env.example .env
-  TOKEN="$(openssl rand -hex 32)"
-  sed -i "s/^APP_TOKEN=.*/APP_TOKEN=${TOKEN}/" .env
-  echo "==> Created .env with a generated APP_TOKEN:"
-  echo "    ${TOKEN}"
+  echo "==> Created .env (APP_TOKEN left empty: the app accepts localhost connections only)"
 fi
 
 cat <<MSG
@@ -61,5 +58,5 @@ Done. Remaining manual steps:
   2. Run tests (optional):           .venv/bin/pytest -q
   3. Start the app:                  .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
   4. From YOUR laptop, open a tunnel: ssh -i <key.pem> -L 8000:localhost:8000 ubuntu@<EC2_PUBLIC_IP>
-     then browse http://localhost:8000 and paste the APP_TOKEN.
+     then browse http://localhost:8000 (no login needed).
 MSG

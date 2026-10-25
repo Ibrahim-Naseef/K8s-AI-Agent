@@ -4,100 +4,240 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cluster Doctor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#eef1f5; --panel:#ffffff; --ink:#17202b; --muted:#5b6776; --line:#d6dce5;
-  --accent:#2457d6; --accent-ink:#ffffff; --ok:#1f7a4d; --warn:#9a5b00; --bad:#b42318; --code:#f1f4f9;
+  color-scheme:light dark;
+  --bg:#e8eff5; --surface:rgba(255,255,255,.64); --solid:#f7fafc; --ink:#0e2230; --muted:#4f6676; --line:rgba(14,34,48,.13);
+  --teal:#0b7f7a; --blue:#2b6cf0; --coral:#e8493b; --amber:#a86f00; --green:#1a8f62;
+  --on-accent:#fff; --key-edge:#065652; --code:rgba(14,34,48,.07); --shadow:0 24px 50px -24px rgba(14,34,48,.4);
+  --display:"Bricolage Grotesque",ui-sans-serif,"Avenir Next","Segoe UI",system-ui,sans-serif;
+  --body:ui-sans-serif,"Avenir Next","Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
-@media (prefers-color-scheme:dark){
-  :root{--bg:#10151c; --panel:#18202a; --ink:#e7ecf3; --muted:#9aa7b8; --line:#2b3644;
-        --accent:#6f95ff; --accent-ink:#0b1220; --ok:#4cc38a; --warn:#e0a64a; --bad:#ff7b6e; --code:#101720;}
-}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#06141b; --surface:rgba(14,32,42,.6); --solid:#0d1f29; --ink:#e6f2f5; --muted:#8fa9b6; --line:rgba(230,242,245,.13);
+  --teal:#35d0c4; --blue:#6a9bff; --coral:#ff7a6b; --amber:#f0b84a; --green:#4cd6a0;
+  --on-accent:#04201f; --key-edge:#1b8f86; --code:rgba(0,0,0,.3); --shadow:0 28px 60px -26px rgba(0,0,0,.8);}}
 *{box-sizing:border-box}
 html,body{height:100%}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,"Avenir Next","Segoe UI",system-ui,sans-serif}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--body);overflow-x:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.app{display:grid;grid-template-columns:300px 1fr;height:100%}
-aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-aside h1{font-size:17px;margin:0;padding:18px 18px 4px;letter-spacing:.01em}
-aside p{margin:0;padding:0 18px 14px;color:var(--muted);font-size:13px}
-#history{overflow:auto;flex:1;border-top:1px solid var(--line)}
-.h-item{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:12px 18px;cursor:pointer}
-.h-item:hover,.h-item[aria-current="true"]{background:var(--code)}
-.h-item b{display:block;font-weight:600;font-size:13px}
-.h-item span{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--muted)}
-.dot.done{background:var(--ok)} .dot.error{background:var(--bad)} .dot.running{background:var(--warn)}
-main{overflow:auto;padding:28px clamp(16px,4vw,48px)}
-.wrap{max-width:820px;margin:0 auto}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px 20px;margin-bottom:18px}
-label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
-input,select,textarea{width:100%;padding:9px 10px;background:var(--bg);border:1px solid var(--line);border-radius:4px}
-textarea{resize:vertical;min-height:64px}
-.row{display:grid;grid-template-columns:200px 1fr;gap:14px;margin-bottom:14px}
-.actions{display:flex;gap:10px;align-items:center}
-button.primary{background:var(--accent);color:var(--accent-ink);border:0;border-radius:4px;padding:10px 18px;font-weight:600;cursor:pointer}
-button.primary:disabled{opacity:.5;cursor:default}
-button.ghost{background:none;border:1px solid var(--line);border-radius:4px;padding:8px 12px;cursor:pointer}
-.err{color:var(--bad);font-size:13px}
-/* the memorable part: the investigation trace */
-.trace{margin:0;padding:0;list-style:none;border-left:2px solid var(--line);margin-left:6px}
-.trace li{position:relative;padding:3px 0 9px 18px;font-size:14px}
-.trace li::before{content:"";position:absolute;left:-6px;top:9px;width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid var(--muted)}
-.trace li.tool::before{border-color:var(--accent)} .trace li.precheck::before{border-color:var(--warn)}
-.trace li.live::before{background:var(--accent);border-color:var(--accent)}
-.trace code{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12.5px;color:var(--muted)}
-.finding{margin:4px 0 0;font-size:13px;color:var(--muted)}
-.diag h2{margin:0 0 6px;font-size:20px;line-height:1.3}
-.pill{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:99px;padding:1px 10px;margin:0 6px 8px 0}
-.pill.high{color:var(--ok);border-color:var(--ok)} .pill.medium{color:var(--warn);border-color:var(--warn)} .pill.low{color:var(--bad);border-color:var(--bad)}
-.diag h3{font-size:14px;margin:18px 0 6px}
-.diag ul{margin:0;padding-left:20px}
-pre{background:var(--code);border:1px solid var(--line);border-radius:4px;padding:10px 12px;overflow:auto;font:12.5px/1.5 ui-monospace,"SF Mono",Menlo,monospace;margin:6px 0}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
+#scene{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.shell{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column}
+
+.top{display:flex;align-items:center;justify-content:space-between;padding:20px clamp(16px,4vw,48px)}
+.brand{font:700 20px var(--display);letter-spacing:.01em}
+.top-r{display:flex;gap:12px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:99px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(12px);font-size:13px}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.chip[data-s=running] i{background:var(--blue);animation:pulse 1s ease-in-out infinite}
+.chip[data-s=done] i{background:var(--green)} .chip[data-s=error] i{background:var(--coral)}
+@keyframes pulse{50%{opacity:.3;transform:scale(.7)}}
+
+.stage{width:min(660px,100%);margin-left:clamp(0px,6vw,100px);padding:clamp(8px,4vh,48px) clamp(16px,4vw,32px) 80px}
+h1{font:700 clamp(36px,5.4vw,60px)/1.04 var(--display);margin:0 0 14px;letter-spacing:-.02em;
+   transform:translate3d(calc(var(--px,0)*-10px),calc(var(--py,0)*-6px),0)}
+.lede{margin:0 0 26px;color:var(--muted);max-width:52ch;font-size:16px}
+h2{font:700 17px var(--display);margin:0 0 12px}
+
+.glass{background:var(--surface);backdrop-filter:blur(18px) saturate(1.25);-webkit-backdrop-filter:blur(18px) saturate(1.25);
+  border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);padding:22px;margin-bottom:20px}
+.tilt{transition:transform .18s ease-out;will-change:transform}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+select,input,textarea{width:100%;padding:11px 13px;background:var(--solid);border:1px solid var(--line);border-radius:12px}
+textarea{resize:vertical;min-height:72px}
+.grid{display:grid;grid-template-columns:170px 1fr;gap:14px;margin-bottom:18px}
+.token{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.token .r{display:flex;gap:10px}
+.actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.key{background:var(--teal);color:var(--on-accent);border:0;border-radius:14px;padding:13px 26px;font:700 15px var(--display);cursor:pointer;
+  box-shadow:0 6px 0 var(--key-edge),0 18px 26px -12px rgba(0,0,0,.45);transform:translateY(0);transition:transform .08s,box-shadow .08s}
+.key:hover{transform:translateY(-1px)}
+.key:active{transform:translateY(5px);box-shadow:0 1px 0 var(--key-edge),0 6px 10px -6px rgba(0,0,0,.4)}
+.key:disabled{opacity:.55;cursor:default;transform:translateY(3px);box-shadow:0 3px 0 var(--key-edge)}
+.ghost{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 14px;cursor:pointer;backdrop-filter:blur(12px)}
+.ghost:hover{border-color:var(--teal)}
+.err{color:var(--coral);font-size:13px}
+
+.trace{list-style:none;margin:0 0 0 6px;padding:0;border-left:2px solid var(--line)}
+.trace li{position:relative;padding:2px 0 10px 20px;font-size:14px}
+.trace li::before{content:"";position:absolute;left:-7px;top:8px;width:12px;height:12px;border-radius:50%;background:var(--solid);border:2px solid var(--muted)}
+.trace li.tool::before{border-color:var(--blue)} .trace li.precheck::before{border-color:var(--coral)}
+.trace li.live::before{background:var(--blue);border-color:var(--blue);animation:pulse 1s ease-in-out infinite}
+.trace code{font:12.5px var(--mono);color:var(--muted)}
+.finding{margin-top:3px;font-size:13px;color:var(--muted)}
+
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.pill{padding:3px 12px;border-radius:99px;border:1px solid var(--line);font-size:13px;background:var(--solid)}
+.meter{display:inline-flex;gap:4px;align-items:center;font-size:13px;color:var(--muted)}
+.meter b{width:22px;height:8px;border-radius:4px;background:var(--line)}
+.meter[data-l=low] b:nth-child(-n+1){background:var(--coral)}
+.meter[data-l=medium] b:nth-child(-n+2){background:var(--amber)}
+.meter[data-l=high] b:nth-child(-n+3){background:var(--green)}
+.meter span{margin-left:6px}
+.diag h2.cause{font-size:clamp(20px,2.6vw,25px);line-height:1.25;margin-bottom:8px}
+.diag h3{font:700 15px var(--display);margin:20px 0 6px}
+.diag ul{margin:0;padding-left:20px} .diag li{margin-bottom:3px}
+.cmd{position:relative;margin:8px 0}
+.cmd pre{margin:0;padding:12px 78px 12px 14px;background:var(--code);border:1px solid var(--line);border-radius:12px;overflow:auto;font:12.5px/1.55 var(--mono)}
+.cmd button{position:absolute;right:8px;top:8px;font-size:12px;padding:3px 10px;border-radius:8px;border:1px solid var(--line);background:var(--solid);cursor:pointer}
 .muted{color:var(--muted)}
-@media (max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:auto 1fr}aside{max-height:34vh;border-right:0;border-bottom:1px solid var(--line)}.row{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:no-preference){.trace li.live::before{animation:p 1.2s ease-in-out infinite}@keyframes p{50%{opacity:.35}}}
+
+.scrim{position:fixed;inset:0;z-index:5;background:rgba(0,0,0,.25)}
+.drawer{position:fixed;z-index:6;top:0;right:0;bottom:0;width:min(380px,92vw);background:var(--solid);border-left:1px solid var(--line);box-shadow:var(--shadow);
+  display:flex;flex-direction:column;visibility:hidden;transform:translateX(105%);transition:transform .3s,visibility 0s .3s}
+.drawer.open{visibility:visible;transform:none;transition:transform .3s}
+.drawer header{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid var(--line)}
+.drawer h2{margin:0}
+#history{overflow:auto;flex:1}
+.h-item{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:14px 20px;cursor:pointer}
+.h-item:hover,.h-item[aria-current=true]{background:var(--code)}
+.h-item b{display:flex;align-items:center;gap:8px;font-weight:600}
+.h-item small{display:block;color:var(--muted)}
+.h-item p{margin:4px 0 0;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.done{background:var(--green)} .dot.error{background:var(--coral)} .dot.running{background:var(--blue)}
+
+@media (max-width:760px){.grid{grid-template-columns:1fr}.stage{margin-left:0}#scene{opacity:.55}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}h1{transform:none}}
 </style>
 </head>
 <body>
-<div class="app">
-  <aside>
-    <h1>Cluster Doctor</h1>
-    <p>Past investigations</p>
-    <div id="history"></div>
-  </aside>
-  <main><div class="wrap">
-    <section class="card" id="auth">
-      <label for="token">Access token</label>
-      <div class="actions"><input id="token" type="password" autocomplete="off" placeholder="APP_TOKEN from your server">
-      <button class="ghost" id="save-token">Save</button></div>
-      <div class="err" id="auth-err" role="alert"></div>
-    </section>
+<canvas id="scene" aria-hidden="true"></canvas>
+<div class="shell">
+  <header class="top">
+    <div class="brand">Cluster Doctor</div>
+    <div class="top-r">
+      <span class="chip" id="chip" data-s="idle"><i></i><span id="chip-t">Ready</span></span>
+      <button class="ghost" id="hist-btn" aria-expanded="false" aria-controls="drawer">History</button>
+    </div>
+  </header>
 
-    <section class="card">
-      <div class="row">
-        <div><label for="ns">Namespace</label><select id="ns"></select></div>
-        <div><label for="q">What's wrong? (optional)</label>
-          <textarea id="q" maxlength="500" placeholder="e.g. payments API returns 503 since the last deploy"></textarea></div>
+  <main class="stage">
+    <h1>Find out why your pods are failing</h1>
+    <p class="lede">Pick a namespace. Cluster Doctor checks pods, logs and events, then tells you the cause and how to fix it. It only reads your cluster and never changes it.</p>
+
+    <section class="glass tilt" id="form">
+      <div class="token" id="token-row" hidden>
+        <label for="token">This server requires an access token</label>
+        <div class="r"><input id="token" type="password" autocomplete="off"><button class="ghost" id="save-token">Save</button></div>
+        <div class="err" id="token-err" role="alert"></div>
       </div>
-      <div class="actions"><button class="primary" id="go">Investigate namespace</button><span class="err" id="go-err" role="alert"></span></div>
+      <div class="grid">
+        <div><label for="ns">Namespace</label><select id="ns" disabled></select></div>
+        <div><label for="q">What's wrong? (optional)</label>
+          <textarea id="q" maxlength="500" placeholder="e.g. the payments API returns 503 since the last deploy"></textarea></div>
+      </div>
+      <div class="actions"><button class="key" id="go">Investigate namespace</button><span class="err" id="go-err" role="alert"></span></div>
     </section>
 
-    <section class="card" id="trace-card" hidden>
-      <ol class="trace" id="trace" aria-live="polite"></ol>
-    </section>
-
-    <section class="card diag" id="diag" hidden></section>
-  </div></main>
+    <section class="glass" id="trace-card" hidden><h2>What was checked</h2><ol class="trace" id="trace" aria-live="polite"></ol></section>
+    <section class="glass diag" id="diag" hidden></section>
+  </main>
 </div>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-label="Past investigations">
+  <header><h2>History</h2><button class="ghost" id="hist-close">Close</button></header>
+  <div id="history"></div>
+</aside>
 
 <script>
 const $ = id => document.getElementById(id);
+const motion = !matchMedia("(prefers-reduced-motion: reduce)").matches;
 const store = { get: k => { try { return localStorage.getItem(k) } catch { return null } },
                 set: (k, v) => { try { localStorage.setItem(k, v) } catch {} } };
 let token = store.get("cd_token") || "", pollTimer = null, currentId = null;
 
+/* ---------------------------------------------------------------- 3D cluster */
+const viz = (() => {
+  const cv = $("scene"), ctx = cv.getContext("2d");
+  const N = 52, nodes = [], edges = [];
+  for (let i = 0; i < N; i++) {                       // fibonacci sphere with jitter
+    const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = i * 2.399963, k = .86 + Math.random() * .3;
+    nodes.push({ x: Math.cos(th) * r * k, y: y * k, z: Math.sin(th) * r * k, phase: Math.random() * 6.28, bad: false });
+  }
+  const seen = new Set();
+  nodes.forEach((a, i) => {
+    nodes.map((b, j) => [j, (a.x - b.x) ** 2 + (a.y - b.y) ** 2 + (a.z - b.z) ** 2]).filter(d => d[0] !== i)
+      .sort((u, v) => u[1] - v[1]).slice(0, 3).forEach(([j]) => {
+        const key = i < j ? i + "-" + j : j + "-" + i; if (!seen.has(key)) { seen.add(key); edges.push([i, j]); } });
+  });
+  const badOrder = nodes.map((_, i) => i).sort(() => Math.random() - .5);
+  let mode = "idle", W, H, dpr, col, spin = 0, px = 0, py = 0, tpx = 0, tpy = 0;
+  const readColors = () => { const s = getComputedStyle(document.documentElement);
+    col = Object.fromEntries(["teal", "blue", "coral", "amber", "green"].map(k => [k, s.getPropertyValue("--" + k).trim()])); };
+  function resize() {
+    dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); if (!motion) draw(0);
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    const small = W < 760, R = Math.min(W, H) * (small ? .3 : .36), cx = small ? W / 2 : W * .7, cy = H * (small ? .3 : .5);
+    const ay = spin + px * 1.1, ax = .25 + py * .6, ca = Math.cos(ay), sa = Math.sin(ay), cb = Math.cos(ax), sb = Math.sin(ax);
+    const sweep = Math.sin(t / 650) * .95;
+    const P = nodes.map(n => { const x1 = n.x * ca + n.z * sa, z1 = -n.x * sa + n.z * ca,
+      y2 = n.y * cb - z1 * sb, z2 = n.y * sb + z1 * cb, p = 3 / (3 - z2);
+      return { sx: cx + x1 * R * p, sy: cy + y2 * R * p, z: z2, y: y2, p, n }; });
+    const base = mode === "error" ? col.amber : col.teal;
+    ctx.lineWidth = 1;
+    for (const [a, b] of edges) {
+      const A = P[a], B = P[b], bad = A.n.bad || B.n.bad;
+      ctx.globalAlpha = (bad ? .35 : .09) + .22 * ((A.z + B.z) / 2 + 1) / 2;
+      ctx.strokeStyle = bad ? col.coral : base;
+      ctx.beginPath(); ctx.moveTo(A.sx, A.sy); ctx.lineTo(B.sx, B.sy); ctx.stroke();
+    }
+    P.sort((u, v) => u.z - v.z).forEach(q => {
+      const depth = (q.z + 1) / 2, r = (3.2 + 3.6 * depth) * q.p * (R / 300);
+      if (mode === "running") {
+        const hl = Math.exp(-((q.y - sweep) ** 2) / .03);
+        if (hl > .05) { ctx.globalAlpha = hl * .7; ctx.strokeStyle = col.blue; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(q.sx, q.sy, r + 4 + hl * 7, 0, 6.283); ctx.stroke(); ctx.lineWidth = 1; }
+      }
+      if (q.n.bad) {
+        const pulse = .5 + .5 * Math.sin(t / 260 + q.n.phase);
+        ctx.globalAlpha = .16 + .2 * pulse; ctx.fillStyle = col.coral;
+        ctx.beginPath(); ctx.arc(q.sx, q.sy, r + 5 + pulse * 8, 0, 6.283); ctx.fill();
+      }
+      ctx.globalAlpha = .4 + .6 * depth; ctx.fillStyle = q.n.bad ? col.coral : base;
+      ctx.beginPath(); ctx.arc(q.sx, q.sy, r, 0, 6.283); ctx.fill();
+      ctx.globalAlpha = .55 * depth; ctx.fillStyle = "#fff";            // highlight => reads as a sphere
+      ctx.beginPath(); ctx.arc(q.sx - r * .3, q.sy - r * .3, r * .34, 0, 6.283); ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+  function loop(t) {
+    spin += mode === "running" ? .008 : .0022;
+    px += (tpx - px) * .05; py += (tpy - py) * .05;
+    document.documentElement.style.setProperty("--px", px.toFixed(3));
+    document.documentElement.style.setProperty("--py", py.toFixed(3));
+    draw(t); requestAnimationFrame(loop);
+  }
+  addEventListener("pointermove", e => { tpx = e.clientX / innerWidth - .5; tpy = e.clientY / innerHeight - .5; });
+  addEventListener("resize", resize);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readColors(); if (!motion) draw(0); });
+  readColors(); resize(); if (motion) requestAnimationFrame(loop);
+  return {
+    mode(m) { mode = m; if (!motion) draw(0); },
+    setBad(n) { const k = Math.min(n, 14); nodes.forEach(x => x.bad = false); badOrder.slice(0, k).forEach(i => nodes[i].bad = true); if (!motion) draw(0); },
+  };
+})();
+
+/* 3D tilt on the form card */
+document.querySelectorAll(".tilt").forEach(card => {
+  card.addEventListener("pointermove", e => {
+    if (!motion) return; const r = card.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5;
+    card.style.transform = `perspective(900px) rotateY(${x * 5}deg) rotateX(${-y * 5}deg)`;
+  });
+  card.addEventListener("pointerleave", () => card.style.transform = "");
+});
+
+/* ---------------------------------------------------------------- helpers */
 function el(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) k === "class" ? e.className = v : e.setAttribute(k, v);
@@ -105,33 +245,53 @@ function el(tag, attrs = {}, ...kids) {
   return e;
 }
 async function api(path, opts = {}) {
-  const r = await fetch(path, { ...opts, headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" } });
-  if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.detail || r.statusText); }
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = "Bearer " + token;
+  const r = await fetch(path, { ...opts, headers });
+  if (!r.ok) { const j = await r.json().catch(() => ({})); const e = new Error(j.detail || r.statusText); e.status = r.status; throw e; }
   return r.json();
 }
+function setChip(s, text) { $("chip").dataset.s = s; $("chip-t").textContent = text; }
 
+/* ---------------------------------------------------------------- boot */
 async function boot() {
+  const cfg = await fetch("/api/config").then(r => r.json()).catch(() => ({ auth_required: false }));
+  $("token-row").hidden = !cfg.auth_required;
   $("token").value = token;
   try {
     const nss = await api("/api/namespaces");
     $("ns").replaceChildren(...nss.map(n => el("option", { value: n }, n)));
-    $("auth").hidden = true; $("auth-err").textContent = "";
+    $("ns").disabled = false; $("token-row").hidden = true; $("token-err").textContent = ""; $("go-err").textContent = "";
     loadHistory();
-  } catch (e) { $("auth").hidden = false; $("auth-err").textContent = token ? e.message : ""; }
+  } catch (e) {
+    if (cfg.auth_required) $("token-err").textContent = token ? "That token was not accepted." : "";
+    else $("go-err").textContent = e.message;
+  }
 }
 $("save-token").onclick = () => { token = $("token").value.trim(); store.set("cd_token", token); boot(); };
+
+/* ---------------------------------------------------------------- history drawer */
+function drawer(open) {
+  $("drawer").classList.toggle("open", open); $("scrim").hidden = !open;
+  $("hist-btn").setAttribute("aria-expanded", String(open)); if (open) loadHistory();
+}
+$("hist-btn").onclick = () => drawer(true);
+$("hist-close").onclick = $("scrim").onclick = () => drawer(false);
+addEventListener("keydown", e => { if (e.key === "Escape") drawer(false); });
 
 async function loadHistory() {
   const items = await api("/api/investigations").catch(() => []);
   $("history").replaceChildren(...(items.length ? items.map(i => {
     const b = el("button", { class: "h-item", "aria-current": String(i.id === currentId) },
-      el("b", {}, el("span", { class: "dot " + i.status }), i.namespace + " · " + new Date(i.created_at * 1000).toLocaleString()),
-      el("span", {}, i.headline || i.question || i.status));
-    b.onclick = () => show(i.id);
+      el("b", {}, el("span", { class: "dot " + i.status }), i.namespace),
+      el("small", {}, new Date(i.created_at * 1000).toLocaleString()),
+      el("p", {}, i.headline || i.question || i.status));
+    b.onclick = () => { drawer(false); show(i.id); };
     return b;
-  }) : [el("p", { class: "muted", style: "padding:14px 18px" }, "Nothing yet. Run your first investigation.")]));
+  }) : [el("p", { class: "muted", style: "padding:18px 20px" }, "No investigations yet. Run one and it will show up here.")]));
 }
 
+/* ---------------------------------------------------------------- investigate */
 $("go").onclick = async () => {
   $("go-err").textContent = ""; $("go").disabled = true;
   try {
@@ -139,17 +299,17 @@ $("go").onclick = async () => {
     show(id);
   } catch (e) { $("go-err").textContent = e.message; $("go").disabled = false; }
 };
+function show(id) { currentId = id; clearTimeout(pollTimer); $("diag").hidden = true; viz.setBad(0); poll(); }
 
-function show(id) {
-  currentId = id; clearTimeout(pollTimer); $("diag").hidden = true; poll();
-}
 async function poll() {
   let j;
-  try { j = await api("/api/investigations/" + currentId); } catch (e) { $("go-err").textContent = e.message; $("go").disabled = false; return; }
+  try { j = await api("/api/investigations/" + currentId); }
+  catch (e) { $("go-err").textContent = e.message; $("go").disabled = false; setChip("error", "Error"); viz.mode("error"); return; }
   renderTrace(j);
-  if (j.status === "running") { pollTimer = setTimeout(poll, 1000); return; }
+  if (j.status === "running") { setChip("running", "Investigating"); viz.mode("running"); pollTimer = setTimeout(poll, 1000); return; }
   $("go").disabled = false;
-  j.status === "done" && j.result ? renderDiag(j.result) : renderError(j.error);
+  if (j.status === "done" && j.result) { setChip("done", "Diagnosis ready"); viz.mode("done"); renderDiag(j.result); }
+  else { setChip("error", "Failed"); viz.mode("error"); renderError(j.error); }
   loadHistory();
 }
 
@@ -157,37 +317,43 @@ function renderTrace(j) {
   $("trace-card").hidden = false;
   const items = (j.events || []).map(ev => {
     const li = el("li", { class: ev.kind });
-    if (ev.kind === "tool") li.append(el("code", {}, ev.message));
-    else li.append(ev.message);
-    if (ev.kind === "precheck" && ev.data) ev.data.forEach(f => li.append(el("div", { class: "finding" }, `${f.pod}: ${f.category}${f.detail ? " — " + f.detail : ""}`)));
+    ev.kind === "tool" ? li.append(el("code", {}, ev.message)) : li.append(ev.message);
+    if (ev.kind === "precheck" && ev.data) {
+      viz.setBad(ev.data.length);
+      ev.data.forEach(f => li.append(el("div", { class: "finding" }, `${f.pod}: ${f.category}${f.detail ? ". " + f.detail : ""}`)));
+    }
     return li;
   });
-  if (j.status === "running") items.push(el("li", { class: "live" }, "Working…"));
+  if (j.status === "running") items.push(el("li", { class: "live" }, "Working on it"));
   $("trace").replaceChildren(...items);
 }
 
-function list(title, arr) {
-  return arr && arr.length ? [el("h3", {}, title), el("ul", {}, arr.map(x => el("li", {}, x)))] : [];
+const list = (title, arr) => arr && arr.length ? [el("h3", {}, title), el("ul", {}, arr.map(x => el("li", {}, x)))] : [];
+function cmdBlock(text) {
+  const btn = el("button", { type: "button" }, "Copy");
+  btn.onclick = async () => { try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; setTimeout(() => btn.textContent = "Copy", 1500); } catch { btn.textContent = "Select and copy"; } };
+  return el("div", { class: "cmd" }, el("pre", {}, text), btn);
 }
 function renderDiag(r) {
-  const d = $("diag"); d.hidden = false;
-  const fix = r.fix || {};
+  const d = $("diag"), fix = r.fix || {}, lvl = r.confidence?.level || "low";
+  d.hidden = false;
   d.replaceChildren(
-    el("span", { class: "pill" }, r.category || "Other"),
-    el("span", { class: "pill " + (r.confidence?.level || "") }, (r.confidence?.level || "unknown") + " confidence"),
-    el("h2", {}, r.root_cause),
+    el("div", { class: "pills" }, el("span", { class: "pill" }, r.category || "Other"),
+      el("span", { class: "meter", "data-l": lvl }, el("b"), el("b"), el("b"), el("span", {}, lvl + " confidence"))),
+    el("h2", { class: "cause" }, r.root_cause),
     r.confidence?.reasoning ? el("p", { class: "muted" }, r.confidence.reasoning) : null,
     ...list("Affected", r.affected), ...list("Evidence", r.evidence),
     el("h3", {}, "Suggested fix"), el("p", {}, fix.summary || ""),
-    ...(fix.commands || []).map(c => el("pre", {}, c)),
-    fix.yaml_snippet ? el("pre", {}, fix.yaml_snippet) : null,
+    ...(fix.commands || []).map(cmdBlock), fix.yaml_snippet ? cmdBlock(fix.yaml_snippet) : null,
     ...list("Prevention", r.prevention),
-    el("p", { class: "muted" }, "Review before applying. This tool never changes your cluster.")
+    el("p", { class: "muted" }, "Review before applying. Cluster Doctor never changes your cluster.")
   );
+  d.scrollIntoView({ behavior: motion ? "smooth" : "auto", block: "nearest" });
 }
 function renderError(msg) {
   const d = $("diag"); d.hidden = false;
-  d.replaceChildren(el("h2", {}, "The investigation failed"), el("p", { class: "err" }, msg || "Unknown error"));
+  d.replaceChildren(el("h2", {}, "The investigation failed"), el("p", { class: "err" }, msg || "Unknown error"),
+    el("p", { class: "muted" }, "Rate limits and models without tool support are the usual cause on free tiers. Try again, or switch provider in .env."));
 }
 boot();
 </script>

@@ -5,7 +5,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -23,12 +23,20 @@ JOBS: dict = {}
 LOCK = threading.Lock()
 
 
-def auth(authorization: str = Header(default="")):
-    # Fail closed: refuse everything if no token is configured.
-    if not config.APP_TOKEN:
-        raise HTTPException(503, "Server has no APP_TOKEN configured")
-    if not hmac.compare_digest(authorization.encode(), f"Bearer {config.APP_TOKEN}".encode()):
-        raise HTTPException(401, "Invalid token")
+LOOPBACK = {"127.0.0.1", "::1", "localhost"}
+
+
+def auth(request: Request, authorization: str = Header(default="")):
+    """APP_TOKEN set  -> bearer token required.
+    APP_TOKEN empty -> only connections from localhost (SSH tunnel / port-forward) are accepted."""
+    if config.APP_TOKEN:
+        if not hmac.compare_digest(authorization.encode(), f"Bearer {config.APP_TOKEN}".encode()):
+            raise HTTPException(401, "Invalid token")
+        return
+    host = request.client.host if request.client else ""
+    if host not in LOOPBACK:
+        raise HTTPException(403, "No APP_TOKEN is set, so only localhost access is allowed. "
+                                 "Use the SSH tunnel, or set APP_TOKEN to allow remote access.")
 
 
 class Req(BaseModel):
@@ -53,6 +61,11 @@ def _run(job_id: str, ns: str, question: str):
 @app.get("/healthz")
 def healthz():
     return {"ok": True}
+
+
+@app.get("/api/config")
+def public_config():
+    return {"auth_required": bool(config.APP_TOKEN)}
 
 
 @app.get("/api/namespaces", dependencies=[Depends(auth)])
