@@ -1,0 +1,14 @@
+# [err-image] ErrImagePull: registry host does not resolve
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: bad-registry, namespace: err-image }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: bad-registry } }
+  template:
+    metadata: { labels: { app: bad-registry } }
+    spec:
+      containers:
+        - name: app
+          image: registry.invalid.example/app:1
+          command: ["sleep","3600"]

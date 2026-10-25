@@ -1,0 +1,19 @@
+# [err-network] Service has no endpoints: selector app=webb (typo)
+apiVersion: v1
+kind: Service
+metadata: { name: web, namespace: err-network }
+spec: { selector: { app: webb }, ports: [{ port: 80, targetPort: 80 }] }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: web, namespace: err-network }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: web } }
+  template:
+    metadata: { labels: { app: web } }
+    spec:
+      containers:
+        - name: app
+          image: nginx:1.27-alpine
+          ports: [{ containerPort: 80 }]

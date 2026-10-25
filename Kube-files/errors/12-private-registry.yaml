@@ -1,0 +1,14 @@
+# [err-image] ErrImagePull: private image, no imagePullSecret (unauthorized)
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: private-img, namespace: err-image }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: private-img } }
+  template:
+    metadata: { labels: { app: private-img } }
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/ibrahim-naseef/private-app-that-needs-login:1.0
+          command: ["sleep","3600"]

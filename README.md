@@ -1,4 +1,4 @@
-# Cluster Doctor: AI Kubernetes Troubleshooting Agent
+# K8s-AI: AI Kubernetes Troubleshooting Agent
 
 Point it at a namespace. It scans for unhealthy pods with plain rules, then lets an LLM
 investigate with **read-only** tools (describe, logs, events, deployments, services, PVCs, nodes)
@@ -27,6 +27,29 @@ Browser ──► FastAPI (token auth, namespace allowlist)
 | InsForge for auth/DB/realtime/hosting | FastAPI + SQLite + polling | Fewer moving parts. You can swap InsForge back in behind `db.py` |
 | No tests | Unit tests + 6 intentionally broken workloads | Ground truth for checking diagnoses |
 
+## What's new
+
+- **All Kubernetes files live in `Kube-files/`** (`rbac.yaml`, `app.yaml`, `errors/`).
+- **Error catalog:** 32 reproducible failures (26 files + the original six) in `Kube-files/errors/`, grouped by namespace (below).
+- **New UI:** 3D hacker-debugger robot landing page (dark theme, interactive robot, pill menu with Home, How it works, Namespaces, Investigate, Error catalog, History, About, Safety), a **Namespaces** section listing each namespace with its errors (free rule-based scan), and a navbar: Home, Namespaces, History, Investigate.
+- **Suggestions are never null:** every diagnosis passes through `app/knowledge.py`. If the model returns an empty or malformed `fix`, a known-good summary, kubectl commands and prevention tips for that error category are filled in. Old history entries are repaired on read.
+- The pre-check now also flags stuck `ContainerCreating`, `ReplicaFailure` (quota, missing ServiceAccount) and Services whose selector matches 0 pods. New endpoint: `GET /api/overview`.
+
+## Error catalog (`Kube-files/errors/`)
+
+| Namespace | File | Error |
+|---|---|---|
+| demo | 01 | Original six: CrashLoop (env), ImagePull, OOMKilled, Unschedulable CPU, Service selector typo, missing Secret |
+| err-scheduling | 02-04 | Unschedulable CPU, nodeSelector mismatch, pod anti-affinity |
+| err-quota | 05 | ResourceQuota exceeded (FailedCreate) |
+| err-config | 06-10 | Missing ConfigMap, wrong Secret key, missing Secret volume (FailedMount), runAsNonRoot vs root image, missing ServiceAccount |
+| err-image | 11-14 | Bad tag, private registry (unauthorized), InvalidImageName, unknown registry |
+| err-runtime | 15-23 | Exit code 1, command not found, OOMKilled, liveness fails, readiness fails, init container fails, read-only filesystem, RBAC 403, Job BackoffLimitExceeded |
+| err-network | 24-26 | Service selector typo, targetPort mismatch, DNS resolution failure |
+| err-storage | 27 | PVC Pending (missing StorageClass) |
+
+Not included because kind cannot reproduce them: NetworkPolicy blocks (needs Calico/Cilium), node NotReady/DiskPressure evictions, Ingress without a controller.
+
 ## Setup, step by step
 
 ### 0. Prerequisites
@@ -38,10 +61,10 @@ kind create cluster --name doctor
 kubectl get nodes
 ```
 
-### 2. Deploy the broken test workloads
+### 2. Deploy the broken test workloads (all 32 error scenarios)
 ```bash
-kubectl apply -f broken-workloads/demo.yaml
-kubectl -n demo get pods     # wait ~1 min; expect CrashLoopBackOff, ImagePullBackOff, OOMKilled, Pending, ...
+kubectl apply -f Kube-files/errors/      # namespaces first (00-), then every scenario
+kubectl get pods -A | grep -E 'demo|err-'   # wait ~2 min; expect CrashLoopBackOff, ImagePullBackOff, OOMKilled, Pending, ...
 ```
 
 ### 3. Configure and run the app locally
@@ -59,25 +82,25 @@ Locally the app uses your current kubeconfig context.
 ### 4. Check it diagnoses correctly
 | Workload | Expected diagnosis |
 |---|---|
-| payments | `DATABASE_URL` env var missing (CrashLoopBackOff) |
+| payments (demo) | `DATABASE_URL` env var missing (CrashLoopBackOff) |
 | frontend | image tag does not exist (ImagePullBackOff) |
 | worker | memory limit 50Mi too low (OOMKilled) |
 | batch | requests 100 CPU, no node fits (Unschedulable) |
 | web | Service selector `app=webb` matches 0 pods |
 | api | Secret `db-credentials` not found (ContainerConfigError) |
 
-Use the question box to focus: "why does the web service have no endpoints?"
+The other namespaces follow the table above. Use the question box to focus: "why does the web service have no endpoints?"
 
 ### 5. Run it inside the cluster
 ```bash
 docker build -t k8s-ai-agent:0.1.0 .
-kind load docker-image k8s-ai-agent:0.1.0 --name doctor     # real clusters: push to your registry and edit deploy/app.yaml
+kind load docker-image k8s-ai-agent:0.1.0 --name doctor     # real clusters: push to your registry and edit Kube-files/app.yaml
 
-kubectl apply -f deploy/rbac.yaml
+kubectl apply -f Kube-files/rbac.yaml
 kubectl -n k8s-ai-agent create secret generic k8s-ai-agent-secrets \
   --from-literal=LLM_API_KEY=sk-or-... \
   --from-literal=APP_TOKEN=$(openssl rand -hex 32)
-kubectl apply -f deploy/app.yaml
+kubectl apply -f Kube-files/app.yaml
 kubectl -n k8s-ai-agent port-forward svc/k8s-ai-agent 8080:80
 ```
 Open http://localhost:8080. Read your token back with
@@ -133,9 +156,10 @@ app/k8s_tools.py   read-only tools (+ namespace allowlist, redaction, size caps)
 app/precheck.py    rule-based unhealthy-pod scan
 app/redact.py      secret scrubbing
 app/db.py          SQLite history
-app/static/        dashboard
-deploy/            RBAC + app manifests
-broken-workloads/  six failure scenarios
+app/static/        landing page, namespace overview, investigate, history
+app/knowledge.py   known-error catalog + fix fallbacks (no empty suggestions)
+Kube-files/         ALL Kubernetes manifests: rbac.yaml, app.yaml, errors/ (32 failure scenarios)
+deploy/            systemd unit example (non-Kubernetes)
 tests/             redaction, API auth, agent loop (fake LLM)
 ```
 

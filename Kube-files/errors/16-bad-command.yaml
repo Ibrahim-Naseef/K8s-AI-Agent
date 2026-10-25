@@ -1,0 +1,14 @@
+# [err-runtime] CrashLoopBackOff / RunContainerError: entrypoint binary not found (exit 127/128)
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: bad-cmd, namespace: err-runtime }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: bad-cmd } }
+  template:
+    metadata: { labels: { app: bad-cmd } }
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          command: ["/bin/does-not-exist"]

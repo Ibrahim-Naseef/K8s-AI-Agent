@@ -1,0 +1,14 @@
+# [err-image] InvalidImageName: malformed reference
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: bad-name, namespace: err-image }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: bad-name } }
+  template:
+    metadata: { labels: { app: bad-name } }
+    spec:
+      containers:
+        - name: app
+          image: nginx::latest
+          command: ["sleep","3600"]

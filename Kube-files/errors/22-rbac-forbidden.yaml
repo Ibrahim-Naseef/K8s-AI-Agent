@@ -1,0 +1,19 @@
+# [err-runtime] CrashLoopBackOff: app gets 403 Forbidden from the Kubernetes API
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: no-perms, namespace: err-runtime }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: rbac-denied, namespace: err-runtime }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: rbac-denied } }
+  template:
+    metadata: { labels: { app: rbac-denied } }
+    spec:
+      serviceAccountName: no-perms
+      containers:
+        - name: app
+          image: curlimages/curl:8.8.0
+          command: ["sh","-c",'curl -sk -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc/api/v1/namespaces/err-runtime/secrets; echo; exit 1']

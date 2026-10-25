@@ -1,0 +1,15 @@
+# [err-runtime] CrashLoopBackOff: write to read-only root filesystem
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: readonly, namespace: err-runtime }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: readonly } }
+  template:
+    metadata: { labels: { app: readonly } }
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          command: ["sh","-c",'echo hi > /data.txt || { echo "write failed: Read-only file system"; exit 1; }; sleep 3600']
+          securityContext: { readOnlyRootFilesystem: true }

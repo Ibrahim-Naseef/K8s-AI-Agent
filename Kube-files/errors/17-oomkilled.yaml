@@ -1,0 +1,16 @@
+# [err-runtime] OOMKilled: allocates ~150MB with a 50Mi limit
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: oom, namespace: err-runtime }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: oom } }
+  template:
+    metadata: { labels: { app: oom } }
+    spec:
+      containers:
+        - name: app
+          image: polinux/stress
+          command: ["stress"]
+          args: ["--vm","1","--vm-bytes","150M","--vm-hang","1"]
+          resources: { limits: { memory: 50Mi } }

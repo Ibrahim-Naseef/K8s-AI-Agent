@@ -1,0 +1,15 @@
+# [err-scheduling] Pending: nodeSelector matches no node (FailedScheduling)
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: ssd-only, namespace: err-scheduling }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: ssd-only } }
+  template:
+    metadata: { labels: { app: ssd-only } }
+    spec:
+      nodeSelector: { disktype: ssd-does-not-exist }
+      containers:
+        - name: app
+          image: busybox:1.36
+          command: ["sleep","3600"]

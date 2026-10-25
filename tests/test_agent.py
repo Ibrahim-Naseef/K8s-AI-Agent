@@ -62,3 +62,11 @@ def test_text_json_answer_is_accepted(monkeypatch):
     out = agent.investigate("demo", "", lambda *a, **k: None)
     assert out["root_cause"] == "memory limit too low"
     assert out["confidence"]["level"] == "low"      # defaults filled in
+
+
+def test_null_fix_is_filled_from_knowledge_base():
+    from app.knowledge import normalize
+    d = normalize({"root_cause": "x", "category": "OOMKilled", "affected": ["worker-1"], "fix": {"summary": None, "commands": None}}, "demo")
+    assert d["fix"]["summary"] and "worker-1" in " ".join(d["fix"]["commands"]) and d["prevention"]
+    assert normalize({"fix": "just do it"})["fix"]["summary"] == "just do it"
+    assert normalize(None)["fix"]["commands"]

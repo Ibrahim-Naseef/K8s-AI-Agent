@@ -1,0 +1,11 @@
+# [err-runtime] Job BackoffLimitExceeded: job pods keep failing
+apiVersion: batch/v1
+kind: Job
+metadata: { name: failing-job, namespace: err-runtime }
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - { name: job, image: "busybox:1.36", command: ["sh","-c",'echo "migration failed: table users already exists"; exit 3'] }

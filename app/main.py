@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from . import config, db
 from .agent import investigate
+from .precheck import scan_namespace
 
 @asynccontextmanager
 async def lifespan(_):
@@ -18,7 +19,7 @@ async def lifespan(_):
     yield
 
 
-app = FastAPI(title="AI Kubernetes Troubleshooter", lifespan=lifespan)
+app = FastAPI(title="K8s-AI", lifespan=lifespan)
 JOBS: dict = {}
 LOCK = threading.Lock()
 
@@ -71,6 +72,18 @@ def public_config():
 @app.get("/api/namespaces", dependencies=[Depends(auth)])
 def namespaces():
     return config.ALLOWED_NAMESPACES
+
+
+@app.get("/api/overview", dependencies=[Depends(auth)])
+def overview():
+    """Rule-based scan of every allowed namespace (no LLM, no cost)."""
+    out = []
+    for ns in config.ALLOWED_NAMESPACES:
+        try:
+            out.append({"namespace": ns, "issues": scan_namespace(ns), "error": None})
+        except Exception as e:  # noqa: BLE001  (e.g. namespace does not exist)
+            out.append({"namespace": ns, "issues": [], "error": f"{type(e).__name__}: {str(e)[:120]}"})
+    return out
 
 
 @app.post("/api/investigations", dependencies=[Depends(auth)])

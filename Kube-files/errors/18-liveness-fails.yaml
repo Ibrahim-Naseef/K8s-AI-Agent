@@ -1,0 +1,15 @@
+# [err-runtime] Restarts: liveness probe hits a path that returns 404
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: live-fail, namespace: err-runtime }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: live-fail } }
+  template:
+    metadata: { labels: { app: live-fail } }
+    spec:
+      containers:
+        - name: app
+          image: nginx:1.27-alpine
+          ports: [{ containerPort: 80 }]
+          livenessProbe: { httpGet: { path: /healthz-missing, port: 80 }, initialDelaySeconds: 5, periodSeconds: 5, failureThreshold: 2 }

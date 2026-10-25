@@ -4,6 +4,7 @@ import sqlite3
 import time
 
 from . import config
+from .knowledge import normalize
 
 
 def _conn():
@@ -37,7 +38,7 @@ def upsert(id, namespace, question, status, result=None, error=None, events=None
 
 def _row(r, full=True):
     d = {k: r[k] for k in ("id", "created_at", "namespace", "question", "status", "error")}
-    result = json.loads(r["result"]) if r["result"] else None
+    result = normalize(json.loads(r["result"]), r["namespace"]) if r["result"] else None
     d["headline"] = (result or {}).get("root_cause", "")[:140]
     if full:
         d["result"] = result

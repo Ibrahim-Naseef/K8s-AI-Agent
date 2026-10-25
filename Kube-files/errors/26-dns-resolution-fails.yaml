@@ -1,0 +1,14 @@
+# [err-network] CrashLoopBackOff: cannot resolve a Service name that does not exist
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: dns-fail, namespace: err-network }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: dns-fail } }
+  template:
+    metadata: { labels: { app: dns-fail } }
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          command: ["sh","-c",'nslookup payments-api.err-network.svc.cluster.local || { echo "dns lookup failed: no such service"; exit 1; }']

@@ -1,0 +1,14 @@
+# [err-runtime] CrashLoopBackOff: app exits 1 after logging a fatal error
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: crasher, namespace: err-runtime }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: crasher } }
+  template:
+    metadata: { labels: { app: crasher } }
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          command: ["sh","-c",'echo "FATAL: cannot connect to postgres:5432 (connection refused)"; exit 1']

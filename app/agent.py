@@ -5,6 +5,7 @@ from openai import OpenAI
 
 from . import config
 from .k8s_tools import run_tool
+from .knowledge import normalize
 from .precheck import scan_namespace
 from .redact import redact_obj
 
@@ -48,7 +49,8 @@ TOOL_SPECS = [
         "root_cause": {"type": "string", "description": "One or two sentences."},
         "category": {"type": "string", "enum": ["CrashLoopBackOff", "ImagePullBackOff", "OOMKilled", "Unschedulable",
                      "ConfigError", "ServiceSelectorMismatch", "ProbeFailure", "DNS/Network", "RolloutFailure",
-                     "ResourceExhaustion", "Storage", "Healthy", "Other"]},
+                     "ResourceExhaustion", "Storage", "ContainerConfigError", "ReplicaFailure", "StuckCreating", "NotReady",
+                     "Failed/Evicted", "Healthy", "Other"]},
         "affected": {"type": "array", "items": {"type": "string"}},
         "evidence": {"type": "array", "items": {"type": "string"}, "description": "Concrete facts seen in tool output."},
         "fix": {"type": "object", "properties": {
@@ -100,9 +102,9 @@ def _diagnosis_from_text(content):
     return d
 
 
-def _sanitize(diagnosis: dict) -> dict:
-    """Never store or show secrets even if the model echoed one."""
-    return redact_obj(diagnosis)
+def _sanitize(diagnosis: dict, ns: str = "<namespace>") -> dict:
+    """Fill empty fields from the knowledge base, then never store or show secrets."""
+    return redact_obj(normalize(diagnosis, ns))
 
 
 def investigate(namespace: str, question: str, emit) -> dict:
@@ -133,7 +135,7 @@ def investigate(namespace: str, question: str, emit) -> dict:
             text_diag = _diagnosis_from_text(getattr(msg, "content", None))
             if text_diag:
                 emit("step", "Writing diagnosis")
-                return _sanitize(text_diag)
+                return _sanitize(text_diag, namespace)
             messages.append({"role": "user", "content": "Call submit_diagnosis now with your best evidence-based answer."})
             continue
 
@@ -144,7 +146,7 @@ def investigate(namespace: str, question: str, emit) -> dict:
                 args = {}
             if tc.function.name == "submit_diagnosis":
                 emit("step", "Writing diagnosis")
-                return _sanitize(args)
+                return _sanitize(args, namespace)
             label = ", ".join(f"{k}={v}" for k, v in args.items() if k != "namespace")
             emit("tool", f"{tc.function.name}({label})")
             messages.append({"role": "tool", "tool_call_id": tc.id, "content": run_tool(tc.function.name, args)})

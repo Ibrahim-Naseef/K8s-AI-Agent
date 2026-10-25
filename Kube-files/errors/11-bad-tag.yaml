@@ -1,0 +1,14 @@
+# [err-image] ImagePullBackOff: tag does not exist
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: bad-tag, namespace: err-image }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: bad-tag } }
+  template:
+    metadata: { labels: { app: bad-tag } }
+    spec:
+      containers:
+        - name: app
+          image: nginx:1.99.99-does-not-exist
+          command: ["sleep","3600"]

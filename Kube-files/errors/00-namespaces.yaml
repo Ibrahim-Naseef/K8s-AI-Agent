@@ -1,0 +1,28 @@
+# One namespace per error family. Apply first (sorts first alphabetically).
+apiVersion: v1
+kind: Namespace
+metadata: { name: err-scheduling }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: err-config }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: err-image }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: err-runtime }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: err-network }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: err-storage }
+---
+apiVersion: v1
+kind: Namespace
+metadata: { name: err-quota }

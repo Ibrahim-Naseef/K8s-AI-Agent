@@ -39,7 +39,7 @@ if ! sg docker -c "kind get clusters" 2>/dev/null | grep -qx doctor; then
 fi
 
 echo "==> Deploying intentionally broken demo workloads"
-kubectl apply -f broken-workloads/demo.yaml
+kubectl apply -f Kube-files/errors/
 
 echo "==> Python environment"
 python3 -m venv .venv

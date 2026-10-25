@@ -1,0 +1,15 @@
+# [err-runtime] NotReady: readiness probe checks the wrong port, pod never Ready
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: not-ready, namespace: err-runtime }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: not-ready } }
+  template:
+    metadata: { labels: { app: not-ready } }
+    spec:
+      containers:
+        - name: app
+          image: nginx:1.27-alpine
+          ports: [{ containerPort: 80 }]
+          readinessProbe: { tcpSocket: { port: 9999 }, periodSeconds: 5 }

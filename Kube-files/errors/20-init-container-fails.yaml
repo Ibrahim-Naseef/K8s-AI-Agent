@@ -1,0 +1,18 @@
+# [err-runtime] Init:CrashLoopBackOff: init container exits non-zero
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: init-fail, namespace: err-runtime }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: init-fail } }
+  template:
+    metadata: { labels: { app: init-fail } }
+    spec:
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ["sh","-c",'echo "db not reachable"; exit 1']
+      containers:
+        - name: app
+          image: busybox:1.36
+          command: ["sleep","3600"]
