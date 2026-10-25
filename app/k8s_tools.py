@@ -1,5 +1,6 @@
 """Read-only Kubernetes tools the agent can call. No tool ever reads Secrets or mutates anything."""
 import json
+import time
 from datetime import datetime, timezone
 
 from kubernetes import client, config as kconfig
@@ -24,9 +25,26 @@ def _init():
     return _core, _apps
 
 
+_NS_CACHE = {"t": 0.0, "v": []}
+
+
+def list_namespaces() -> list:
+    """Explicit ALLOWED_NAMESPACES if set, otherwise every cluster namespace minus system ones (cached 10s)."""
+    if config.ALLOWED_NAMESPACES:
+        return list(config.ALLOWED_NAMESPACES)
+    if _NS_CACHE["v"] and time.time() - _NS_CACHE["t"] < 10:
+        return list(_NS_CACHE["v"])
+    core, _ = _init()
+    names = sorted(n.metadata.name for n in core.list_namespace().items
+                   if n.metadata.name not in config.EXCLUDE_NAMESPACES)
+    _NS_CACHE.update(t=time.time(), v=names)
+    return names
+
+
 def check_ns(ns: str):
-    if ns not in config.ALLOWED_NAMESPACES:
-        raise PermissionError(f"namespace '{ns}' is not allowed (allowed: {config.ALLOWED_NAMESPACES})")
+    allowed = list_namespaces()
+    if ns not in allowed:
+        raise PermissionError(f"namespace '{ns}' is not allowed (known: {allowed})")
 
 
 def _probe(p):

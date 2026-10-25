@@ -62,7 +62,7 @@ footer{position:relative;z-index:1;text-align:center;color:var(--mut);padding:40
 <section id="home" class="hero"><div class="stage" id="stage"><div class="bub" id="bub">> hello, operator</div><div id="bot"><div id="float"></div></div><div class="shadow"></div></div>
 <h1>K8s-AI</h1><p class="lead" id="lead" aria-label="K8s-AI is a Kubernetes troubleshooting robot. It scans every namespace, investigates failing pods with read-only tools, and tells you the root cause and the exact kubectl fix."></p>
 <p style="margin-top:20px"><a class="btn" href="#investigate">Investigate a namespace</a> <a class="btn ghost" href="#namespaces">See live errors</a></p>
-<div class="stats"><div class="stat"><b data-n="32">0</b>error scenarios</div><div class="stat"><b data-n="9">0</b>namespaces</div><div class="stat"><b data-n="8">0</b>read-only tools</div><div class="stat"><b data-n="0">0</b>cluster writes</div></div></section>
+<div class="stats"><div class="stat"><b data-n="32">0</b>error scenarios</div><div class="stat"><b id="nsn">0</b>namespaces</div><div class="stat"><b data-n="8">0</b>read-only tools</div><div class="stat"><b data-n="0">0</b>cluster writes</div></div></section>
 
 <section id="how" class="rev"><h2>How it works</h2><p class="mut">Cheap rules first, AI only when it is needed.</p><div class="grid">
 <div class="card tilt"><div class="step">1</div><h3 style="font-family:inherit">Scan</h3>Rule-based pre-check finds CrashLoops, image errors, OOM kills, pending pods, quota failures and Services with no endpoints. Healthy namespaces cost nothing.</div>
@@ -70,7 +70,7 @@ footer{position:relative;z-index:1;text-align:center;color:var(--mut);padding:40
 <div class="card tilt"><div class="step">3</div><h3 style="font-family:inherit">Diagnose</h3>You get a root cause, evidence, confidence with reasoning and affected objects. Secrets are redacted.</div>
 <div class="card tilt"><div class="step">4</div><h3 style="font-family:inherit">Fix</h3>Copy-ready kubectl commands and prevention tips. If the model gives none, a built-in knowledge base fills them in.</div></div></section>
 
-<section id="namespaces" class="rev"><h2>Namespaces and their errors</h2><p class="mut">Live rule-based scan of every allowed namespace.</p>
+<section id="namespaces" class="rev"><h2>Namespaces and their errors</h2><p class="mut">Live rule-based scan of every namespace in your cluster (system namespaces hidden).</p>
 <div id="tokrow" hidden style="margin-top:14px"><label for="tok">This server needs an access token</label><div style="display:flex;gap:10px"><input id="tok" type="password" autocomplete="off"><button class="btn" id="savetok">Save</button></div><div class="err" id="tokerr"></div></div>
 <div class="grid" id="ns-grid"></div><p style="margin-top:16px"><button class="btn ghost sm" id="rescan">Rescan</button> <span class="err" id="ov-err"></span></p></section>
 
@@ -80,7 +80,7 @@ footer{position:relative;z-index:1;text-align:center;color:var(--mut);padding:40
 <section id="catalog" class="rev"><h2>Error catalog</h2><p class="mut">Every failure in <code>Kube-files/errors/</code>. Filter by namespace or search.</p><div class="chips" id="chips"></div><input id="cs" placeholder="Search errors, e.g. OOM, secret, probe" aria-label="Search errors"><div id="cat" style="margin-top:10px"></div></section>
 
 <section id="history" class="rev"><h2>History</h2><div id="hist" style="margin-top:14px"></div></section>
-<section id="safety" class="rev"><h2>Safety</h2><div class="grid"><div class="card">Read-only ClusterRole. No Secrets access and no write verbs.</div><div class="card">Namespace allowlist and bearer-token auth that fails closed.</div><div class="card">Logs are treated as untrusted data. Redaction runs on everything sent out or stored.</div></div></section>
+<section id="safety" class="rev"><h2>Safety</h2><div class="grid"><div class="card">Read-only ClusterRole. No Secrets access and no write verbs.</div><div class="card">Namespaces are auto-discovered, system ones hidden. Localhost-only by default; set APP_TOKEN to allow remote access.</div><div class="card">Logs are treated as untrusted data. Redaction runs on everything sent out or stored.</div></div></section>
 <section id="about" class="rev"><h2>About</h2><p class="mut" style="max-width:700px">K8s-AI is built by <b>Ibrahim Naseef</b>, DevOps Engineer at TCS, who builds CI/CD pipelines and multicloud infrastructure automation.</p><p><a class="btn ghost sm" href="https://ibrahim-naseef.vercel.app" target="_blank" rel="noopener">Portfolio</a> <a class="btn ghost sm" href="https://github.com/Ibrahim-Naseef/K8s-AI-Agent" target="_blank" rel="noopener">GitHub</a> <a class="btn ghost sm" href="https://linkedin.com/in/ibrahim-naseef" target="_blank" rel="noopener">LinkedIn</a></p></section>
 <footer>K8s-AI · read-only Kubernetes troubleshooting · <a href="https://ibrahim-naseef.vercel.app" target="_blank" rel="noopener">Ibrahim Naseef</a></footer>
 
@@ -137,7 +137,7 @@ async function boot(){const cfg=await fetch("/api/config").then(r=>r.json()).cat
  try{const nss=await api("/api/namespaces");$("ns").replaceChildren(...nss.map(n=>el("option",{value:n},n)));$("ns").disabled=false;$("tokrow").hidden=true;overview();loadHist()}catch(e){if(cfg.auth_required)$("tokerr").textContent=token?"Token not accepted.":"";else $("ov-err").textContent=e.message}}
 $("savetok").onclick=()=>{token=$("tok").value.trim();try{localStorage.setItem("cd_token",token)}catch{}boot()};
 async function overview(){const g=$("ns-grid");g.replaceChildren(el("p",{class:"mut"},"Scanning..."));$("ov-err").textContent="";
- try{const d=await api("/api/overview");g.replaceChildren(...d.map(n=>{const bad=n.issues.length;
+ try{const d=await api("/api/overview");$("nsn").textContent=d.length;g.replaceChildren(...d.map(n=>{const bad=n.issues.length;
   const c=el("div",{class:"card"},el("h3",{},n.namespace,el("span",{class:"badge"+(bad?" bad":"")},n.error?"n/a":bad?bad+" error"+(bad>1?"s":""):"healthy")));
   if(n.error)c.append(el("div",{class:"iss"},"Namespace not found. Apply Kube-files/errors/."));
   n.issues.forEach(i=>c.append(el("div",{class:"iss"},el("b",{},i.category)," ",el("code",{},i.pod))));

@@ -29,6 +29,7 @@ Browser ──► FastAPI (token auth, namespace allowlist)
 
 ## What's new
 
+- **Zero manual config for namespaces and token:** all cluster namespaces are auto-discovered (`kube-system`, `kube-public`, `kube-node-lease`, `local-path-storage` hidden). `APP_TOKEN` is optional: empty means no login and localhost-only access. Both `ALLOWED_NAMESPACES` and `APP_TOKEN` still work as optional overrides.
 - **All Kubernetes files live in `Kube-files/`** (`rbac.yaml`, `app.yaml`, `errors/`).
 - **Error catalog:** 32 reproducible failures (26 files + the original six) in `Kube-files/errors/`, grouped by namespace (below).
 - **New UI:** 3D hacker-debugger robot landing page (dark theme, interactive robot, pill menu with Home, How it works, Namespaces, Investigate, Error catalog, History, About, Safety), a **Namespaces** section listing each namespace with its errors (free rule-based scan), and a navbar: Home, Namespaces, History, Investigate.
@@ -72,11 +73,11 @@ kubectl get pods -A | grep -E 'demo|err-'   # wait ~2 min; expect CrashLoopBackO
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# edit .env: set LLM_API_KEY and APP_TOKEN (openssl rand -hex 32)
+# edit .env: set LLM_API_KEY only (APP_TOKEN and namespaces are optional)
 pytest -q                                   # 10 tests should pass
 uvicorn app.main:app --reload --port 8000
 ```
-Open http://localhost:8000, paste your `APP_TOKEN`, choose `demo`, click **Investigate namespace**.
+Open http://localhost:8000 (no login needed locally). Namespaces are discovered automatically; pick one and click **Investigate namespace**.
 Locally the app uses your current kubeconfig context.
 
 ### 4. Check it diagnoses correctly
@@ -98,13 +99,12 @@ kind load docker-image k8s-ai-agent:0.1.0 --name doctor     # real clusters: pus
 
 kubectl apply -f Kube-files/rbac.yaml
 kubectl -n k8s-ai-agent create secret generic k8s-ai-agent-secrets \
-  --from-literal=LLM_API_KEY=sk-or-... \
-  --from-literal=APP_TOKEN=$(openssl rand -hex 32)
+  --from-literal=LLM_API_KEY=sk-or-...
+# APP_TOKEN is optional; leave it out and use port-forward (localhost-only access)
 kubectl apply -f Kube-files/app.yaml
 kubectl -n k8s-ai-agent port-forward svc/k8s-ai-agent 8080:80
 ```
-Open http://localhost:8080. Read your token back with
-`kubectl -n k8s-ai-agent get secret k8s-ai-agent-secrets -o jsonpath='{.data.APP_TOKEN}' | base64 -d`.
+Open http://localhost:8080 (no login with port-forward). If you did set an `APP_TOKEN`, paste it on the page.
 
 ### 6. Make it reachable by others (optional)
 Put an Ingress with TLS in front of the Service (nginx-ingress + cert-manager), or deploy to any
@@ -120,7 +120,7 @@ instance is too small to run a Kubernetes cluster plus the app. If you only have
 
 ```bash
 git clone https://github.com/<you>/<repo>.git && cd <repo>
-bash scripts/ec2-setup.sh          # Docker, kubectl, kind cluster, demo apps, venv, .env with APP_TOKEN
+bash scripts/ec2-setup.sh          # Docker, kubectl, kind cluster, demo apps, venv, .env
 nano .env                          # set LLM_API_KEY (free key) - keep MODEL=openrouter/free to start
 .venv/bin/pytest -q                # optional sanity check
 .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
@@ -129,7 +129,7 @@ nano .env                          # set LLM_API_KEY (free key) - keep MODEL=ope
 From **your laptop**:
 ```bash
 ssh -i your-key.pem -L 8000:localhost:8000 ubuntu@<EC2_PUBLIC_IP>
-# then open http://localhost:8000 and paste APP_TOKEN
+# then open http://localhost:8000 (no login needed)
 ```
 
 To keep it running after you disconnect, use `deploy/cluster-doctor.service.example` (instructions in its header),

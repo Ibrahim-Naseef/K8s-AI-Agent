@@ -12,7 +12,7 @@ kind: ClusterRole
 metadata: { name: k8s-ai-agent-readonly }
 rules:
   - apiGroups: [""]
-    resources: ["pods", "pods/log", "events", "services", "endpoints", "persistentvolumeclaims", "nodes"]
+    resources: ["pods", "pods/log", "events", "services", "endpoints", "persistentvolumeclaims", "nodes", "namespaces"]
     verbs: ["get", "list"]
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]

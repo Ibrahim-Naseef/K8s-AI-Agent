@@ -1,6 +1,6 @@
 # Create the secret first (never commit real values):
 #   kubectl -n k8s-ai-agent create secret generic k8s-ai-agent-secrets \
-#     --from-literal=LLM_API_KEY=sk-or-... --from-literal=APP_TOKEN=$(openssl rand -hex 32)
+#     --from-literal=LLM_API_KEY=sk-or-...   # APP_TOKEN is optional (empty = localhost/port-forward only)
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata: { name: k8s-ai-agent-data, namespace: k8s-ai-agent }
@@ -26,8 +26,6 @@ spec:
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 8000 }]
           envFrom: [{ secretRef: { name: k8s-ai-agent-secrets } }]
-          env:
-            - { name: ALLOWED_NAMESPACES, value: "default,demo,err-scheduling,err-quota,err-config,err-image,err-runtime,err-network,err-storage" }
           readinessProbe: { httpGet: { path: /healthz, port: 8000 } }
           livenessProbe: { httpGet: { path: /healthz, port: 8000 }, initialDelaySeconds: 10 }
           resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 384Mi } }

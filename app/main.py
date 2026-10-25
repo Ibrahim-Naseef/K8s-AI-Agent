@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from . import config, db
 from .agent import investigate
 from .precheck import scan_namespace
+from .k8s_tools import list_namespaces
 
 @asynccontextmanager
 async def lifespan(_):
@@ -69,16 +70,23 @@ def public_config():
     return {"auth_required": bool(config.APP_TOKEN)}
 
 
+def _namespaces_or_503():
+    try:
+        return list_namespaces()
+    except Exception as e:  # noqa: BLE001  (cluster unreachable, RBAC missing, ...)
+        raise HTTPException(503, f"Cannot list namespaces: {type(e).__name__}: {str(e)[:150]}")
+
+
 @app.get("/api/namespaces", dependencies=[Depends(auth)])
 def namespaces():
-    return config.ALLOWED_NAMESPACES
+    return _namespaces_or_503()
 
 
 @app.get("/api/overview", dependencies=[Depends(auth)])
 def overview():
     """Rule-based scan of every allowed namespace (no LLM, no cost)."""
     out = []
-    for ns in config.ALLOWED_NAMESPACES:
+    for ns in _namespaces_or_503():
         try:
             out.append({"namespace": ns, "issues": scan_namespace(ns), "error": None})
         except Exception as e:  # noqa: BLE001  (e.g. namespace does not exist)
@@ -88,8 +96,9 @@ def overview():
 
 @app.post("/api/investigations", dependencies=[Depends(auth)])
 def start(req: Req):
-    if req.namespace not in config.ALLOWED_NAMESPACES:
-        raise HTTPException(403, f"Namespace not allowed. Allowed: {config.ALLOWED_NAMESPACES}")
+    known = _namespaces_or_503()
+    if req.namespace not in known:
+        raise HTTPException(403, f"Unknown namespace. Available: {known}")
     with LOCK:
         if sum(1 for j in JOBS.values() if j["status"] == "running") >= 3:
             raise HTTPException(429, "Too many investigations running; try again shortly")
