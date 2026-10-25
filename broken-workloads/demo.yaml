@@ -1,0 +1,100 @@
+# Six intentionally broken workloads for testing. Apply: kubectl apply -f broken-workloads/demo.yaml
+apiVersion: v1
+kind: Namespace
+metadata: { name: demo }
+---
+# 1. CrashLoopBackOff: required env var missing
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: payments, namespace: demo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: payments } }
+  template:
+    metadata: { labels: { app: payments } }
+    spec:
+      containers:
+        - name: app
+          image: busybox:1.36
+          command: ["sh", "-c", 'if [ -z "$DATABASE_URL" ]; then echo "FATAL: DATABASE_URL is not set"; exit 1; fi; sleep 3600']
+---
+# 2. ImagePullBackOff: tag does not exist
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: frontend, namespace: demo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: frontend } }
+  template:
+    metadata: { labels: { app: frontend } }
+    spec:
+      containers:
+        - { name: web, image: "nginx:1.99.99-does-not-exist" }
+---
+# 3. OOMKilled: allocates ~150MB with a 50Mi limit
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: worker, namespace: demo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: worker } }
+  template:
+    metadata: { labels: { app: worker } }
+    spec:
+      containers:
+        - name: stress
+          image: polinux/stress
+          command: ["stress"]
+          args: ["--vm", "1", "--vm-bytes", "150M", "--vm-hang", "1"]
+          resources: { limits: { memory: 50Mi } }
+---
+# 4. Pending/Unschedulable: asks for 100 CPUs
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: batch, namespace: demo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: batch } }
+  template:
+    metadata: { labels: { app: batch } }
+    spec:
+      containers:
+        - { name: job, image: "busybox:1.36", command: ["sleep", "3600"], resources: { requests: { cpu: "100" } } }
+---
+# 5. Service selector mismatch: Service selects app=webb (typo)
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: web, namespace: demo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: web } }
+  template:
+    metadata: { labels: { app: web } }
+    spec:
+      containers:
+        - { name: nginx, image: "nginx:1.27-alpine", ports: [{ containerPort: 80 }] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: web, namespace: demo }
+spec:
+  selector: { app: webb }
+  ports: [{ port: 80, targetPort: 80 }]
+---
+# 6. CreateContainerConfigError: references a Secret that does not exist
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: api, namespace: demo }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: api } }
+  template:
+    metadata: { labels: { app: api } }
+    spec:
+      containers:
+        - name: api
+          image: busybox:1.36
+          command: ["sleep", "3600"]
+          env:
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: db-credentials, key: password } }

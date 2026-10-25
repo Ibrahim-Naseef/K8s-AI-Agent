@@ -1,0 +1,19 @@
+# Optional: keep the app running after you log out / reboot.
+# Generate and install it from the repo root:
+#   sed -e "s|__USER__|$USER|g" -e "s|__DIR__|$PWD|g" deploy/cluster-doctor.service.example \
+#     | sudo tee /etc/systemd/system/cluster-doctor.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now cluster-doctor
+#   journalctl -u cluster-doctor -f
+[Unit]
+Description=Cluster Doctor (AI Kubernetes troubleshooter)
+After=network-online.target docker.service
+
+[Service]
+User=__USER__
+WorkingDirectory=__DIR__
+EnvironmentFile=__DIR__/.env
+ExecStart=__DIR__/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

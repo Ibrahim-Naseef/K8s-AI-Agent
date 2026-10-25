@@ -1,0 +1,26 @@
+# Read-only access. Note: NO access to secrets, configmaps, or any write verbs.
+apiVersion: v1
+kind: Namespace
+metadata: { name: k8s-ai-agent }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: k8s-ai-agent, namespace: k8s-ai-agent }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: { name: k8s-ai-agent-readonly }
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log", "events", "services", "endpoints", "persistentvolumeclaims", "nodes"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: { name: k8s-ai-agent-readonly }
+roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: k8s-ai-agent-readonly }
+subjects:
+  - { kind: ServiceAccount, name: k8s-ai-agent, namespace: k8s-ai-agent }
